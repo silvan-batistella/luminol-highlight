@@ -3,9 +3,11 @@ import { activateLuminol, deactivateLuminol } from './luminol';
 import { HighlightManager } from './highlightManager';  
 import { HighlightTreeProvider } from './sidebar/highlightTreeProvider';  
 import { HighlightItem } from './sidebar/highlightItem';  
+import { pickColor } from './colorPicker';  
   
 let manager: HighlightManager;  
 let debounceTimer: NodeJS.Timeout | undefined;  
+let isLuminolActive = false;  
   
 export function activate(context: vscode.ExtensionContext) {  
     manager = new HighlightManager();  
@@ -23,10 +25,15 @@ export function activate(context: vscode.ExtensionContext) {
         }  
     }  
   
-    // Ao trocar de arquivo: sempre reaplicar highlights  
+    // Ao trocar de arquivo: sempre reaplicar highlights (comportamento workspace)  
     const onEditorChange = vscode.window.onDidChangeActiveTextEditor((editor) => {  
         if (!editor) { return; }  
+  
         manager.refreshAll(editor);  
+  
+        if (isLuminolActive) {  
+            activateLuminol(manager, editor);  
+        }  
     });  
   
     // Comando: adicionar highlight  
@@ -37,40 +44,18 @@ export function activate(context: vscode.ExtensionContext) {
             return;  
         }  
   
+        // Pré-preencher com a seleção se for de uma única linha  
+        const selection = editor.selection;  
+        const selectedText = !selection.isEmpty && selection.isSingleLine  
+            ? editor.document.getText(selection)  
+            : '';  
+  
         const pattern = await vscode.window.showInputBox({  
             prompt: 'Digite o padrão regex',  
             placeHolder: 'Ex: <tag>(.*?)</tag>',  
+            value: selectedText,  
         });  
         if (!pattern) { return; }  
-  
-        const colorOptions = [  
-            { label: '#FFFF00', description: 'Amarelo' },  
-            { label: '#FF6B6B', description: 'Vermelho claro' },  
-            { label: '#4ECDC4', description: 'Verde água' },  
-            { label: '#45B7D1', description: 'Azul claro' },  
-            { label: '#96CEB4', description: 'Verde pastel' },  
-            { label: '#DDA0DD', description: 'Lilás' },  
-            { label: 'Cor customizada...', description: '' },  
-        ];  
-  
-        const picked = await vscode.window.showQuickPick(colorOptions, {  
-            placeHolder: 'Escolha uma cor',  
-        });  
-        if (!picked) { return; }  
-  
-        let color = picked.label;  
-        if (color === 'Cor customizada...') {  
-            const custom = await vscode.window.showInputBox({  
-                prompt: 'Digite o código HEX',  
-                placeHolder: '#FF00FF',  
-            });  
-            if (!custom) { return; }  
-            color = custom;  
-        }  
-  
-        manager.addHighlight(editor, pattern, color);  
-        manager.saveState(context);  
-    });  
   
     // Comando: remover highlight  
     const removeCmd = vscode.commands.registerCommand('highlight.removePattern', (item: HighlightItem) => {  
@@ -79,6 +64,9 @@ export function activate(context: vscode.ExtensionContext) {
             const editor = vscode.window.activeTextEditor;  
             if (editor) {  
                 manager.refreshAll(editor);  
+                if (isLuminolActive) {  
+                    activateLuminol(manager, editor);  
+                }  
             }  
             manager.saveState(context);  
         }  
@@ -88,10 +76,14 @@ export function activate(context: vscode.ExtensionContext) {
     const onChange = vscode.workspace.onDidChangeTextDocument((e) => {  
         const editor = vscode.window.activeTextEditor;  
         if (!editor || editor.document !== e.document) { return; }  
+        if (manager.isSuppressed) { return; }  
   
         if (debounceTimer) { clearTimeout(debounceTimer); }  
         debounceTimer = setTimeout(() => {  
             manager.refreshAll(editor);  
+            if (isLuminolActive) {  
+                activateLuminol(manager, editor);  
+            }  
         }, 300);  
     });  
   
@@ -99,11 +91,7 @@ export function activate(context: vscode.ExtensionContext) {
     const editColorCmd = vscode.commands.registerCommand('highlight.editColor', async (item: HighlightItem) => {  
         if (!item) { return; }  
   
-        const newColor = await vscode.window.showInputBox({  
-            prompt: 'Nova cor HEX',  
-            placeHolder: '#FF00FF',  
-            value: item.entry.color,  
-        });  
+        const newColor = await pickColor(item.entry.color);  
         if (!newColor) { return; }  
   
         const editor = vscode.window.activeTextEditor;  
@@ -135,6 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
         manager.suppressAll(editor);  
+        if (isLuminolActive) {  
+            deactivateLuminol(manager, editor);  
+        }  
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', true);  
     });  
   
@@ -142,12 +133,13 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
         manager.unsuppressAll(editor);  
+        if (isLuminolActive) {  
+            activateLuminol(manager, editor);  
+        }  
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', false);  
     });  
   
     // Comando: luminol  
-    let isLuminolActive = false;  
-  
     const luminolCmd = vscode.commands.registerCommand('highlight.luminol', () => {  
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
