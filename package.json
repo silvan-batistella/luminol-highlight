@@ -53,21 +53,6 @@
         "command": "highlight.luminolOff",
         "title": "Desativar Luminol",
         "icon": "$(lightbulb-autofix)"
-      },
-      {
-        "command": "highlight.scopeOpenFiles",
-        "title": "Escopo atual: Workspace (clique para mudar)",
-        "icon": "$(folder)"
-      },
-      {
-        "command": "highlight.scopeActiveOnly",
-        "title": "Escopo atual: Arquivos Abertos (clique para mudar)",
-        "icon": "$(file)"
-      },
-      {
-        "command": "highlight.scopeWorkspace",
-        "title": "Escopo atual: Apenas Arquivo Ativo (clique para mudar)",
-        "icon": "$(circle-slash)"
       }
     ],
     "keybindings": [
@@ -114,21 +99,6 @@
         {
           "command": "highlight.luminolOff",
           "when": "view == highlightList && highlight.isLuminol",
-          "group": "navigation"
-        },
-        {
-          "command": "highlight.scopeOpenFiles",
-          "when": "view == highlightList && highlight.scope == 'workspace'",
-          "group": "navigation"
-        },
-        {
-          "command": "highlight.scopeActiveOnly",
-          "when": "view == highlightList && highlight.scope == 'openFiles'",
-          "group": "navigation"
-        },
-        {
-          "command": "highlight.scopeWorkspace",
-          "when": "view == highlightList && highlight.scope == 'activeOnly'",
           "group": "navigation"
         }
       ],

@@ -14,56 +14,19 @@ export function activate(context: vscode.ExtensionContext) {
     const treeProvider = new HighlightTreeProvider(manager);  
     vscode.window.registerTreeDataProvider('highlightList', treeProvider);  
   
-    // --- Variáveis de estado (todas no topo para clareza) ---  
-    let highlightScope: 'workspace' | 'openFiles' | 'activeOnly' = 'workspace';  
-    let isLuminolActive = false;  
-    let pendingRestore = false;  
-  
-    vscode.commands.executeCommand('setContext', 'highlight.scope', highlightScope);  
-  
-    // --- Restaurar highlights salvos no workspace ---  
+    // Restaurar highlights salvos no workspace  
     const saved = HighlightManager.loadState(context);  
     const activeEditor = vscode.window.activeTextEditor;  
     if (activeEditor && saved.length > 0) {  
         for (const { pattern, color } of saved) {  
             manager.addHighlight(activeEditor, pattern, color);  
         }  
-    } else if (saved.length > 0) {  
-        pendingRestore = true;  
     }  
   
-    // --- Ao trocar de arquivo: comportamento depende do escopo ---  
+    // Ao trocar de arquivo: sempre reaplicar highlights  
     const onEditorChange = vscode.window.onDidChangeActiveTextEditor((editor) => {  
         if (!editor) { return; }  
-  
-        // Restauração adiada  
-        if (pendingRestore) {  
-            const savedPatterns = HighlightManager.loadState(context);  
-            for (const { pattern, color } of savedPatterns) {  
-                manager.addHighlight(editor, pattern, color);  
-            }  
-            pendingRestore = false;  
-        }  
-  
-        if (highlightScope === 'workspace') {  
-            manager.refreshAll(editor);  
-        } else if (highlightScope === 'openFiles') {  
-            for (const visibleEditor of vscode.window.visibleTextEditors) {  
-                manager.refreshAll(visibleEditor);  
-            }  
-        } else if (highlightScope === 'activeOnly') {  
-            for (const visibleEditor of vscode.window.visibleTextEditors) {  
-                if (visibleEditor !== editor) {  
-                    manager.clearDecorations(visibleEditor);  
-                }  
-            }  
-            manager.refreshAll(editor);  
-        }  
-  
-        // Reaplicar Luminol no novo editor  
-        if (isLuminolActive) {  
-            activateLuminol(manager, editor);  
-        }  
+        manager.refreshAll(editor);  
     });  
   
     // Comando: adicionar highlight  
@@ -107,20 +70,6 @@ export function activate(context: vscode.ExtensionContext) {
   
         manager.addHighlight(editor, pattern, color);  
         manager.saveState(context);  
-  
-        // Se escopo é openFiles, aplicar nos editores visíveis também  
-        if (highlightScope === 'openFiles') {  
-            for (const visibleEditor of vscode.window.visibleTextEditors) {  
-                if (visibleEditor !== editor) {  
-                    manager.refreshAll(visibleEditor);  
-                }  
-            }  
-        }  
-  
-        // Atualizar Luminol após adicionar highlight  
-        if (isLuminolActive) {  
-            activateLuminol(manager, editor);  
-        }  
     });  
   
     // Comando: remover highlight  
@@ -130,9 +79,6 @@ export function activate(context: vscode.ExtensionContext) {
             const editor = vscode.window.activeTextEditor;  
             if (editor) {  
                 manager.refreshAll(editor);  
-                if (isLuminolActive) {  
-                    activateLuminol(manager, editor);  
-                }  
             }  
             manager.saveState(context);  
         }  
@@ -142,14 +88,10 @@ export function activate(context: vscode.ExtensionContext) {
     const onChange = vscode.workspace.onDidChangeTextDocument((e) => {  
         const editor = vscode.window.activeTextEditor;  
         if (!editor || editor.document !== e.document) { return; }  
-        if (manager.isSuppressed) { return; }  
   
         if (debounceTimer) { clearTimeout(debounceTimer); }  
         debounceTimer = setTimeout(() => {  
             manager.refreshAll(editor);  
-            if (isLuminolActive) {  
-                activateLuminol(manager, editor);  
-            }  
         }, 300);  
     });  
   
@@ -193,9 +135,6 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
         manager.suppressAll(editor);  
-        if (isLuminolActive) {  
-            deactivateLuminol(manager, editor);  
-        }  
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', true);  
     });  
   
@@ -203,13 +142,12 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
         manager.unsuppressAll(editor);  
-        if (isLuminolActive) {  
-            activateLuminol(manager, editor);  
-        }  
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', false);  
     });  
   
     // Comando: luminol  
+    let isLuminolActive = false;  
+  
     const luminolCmd = vscode.commands.registerCommand('highlight.luminol', () => {  
         const editor = vscode.window.activeTextEditor;  
         if (!editor) { return; }  
@@ -226,42 +164,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('setContext', 'highlight.isLuminol', false);  
     });  
   
-    // Comando: escopo → workspace  
-    const scopeWorkspaceCmd = vscode.commands.registerCommand('highlight.scopeWorkspace', () => {  
-        highlightScope = 'workspace';  
-        vscode.commands.executeCommand('setContext', 'highlight.scope', 'workspace');  
-        const editor = vscode.window.activeTextEditor;  
-        if (editor) { manager.refreshAll(editor); }  
-    });  
-  
-    // Comando: escopo → open files  
-    const scopeOpenFilesCmd = vscode.commands.registerCommand('highlight.scopeOpenFiles', () => {  
-        highlightScope = 'openFiles';  
-        vscode.commands.executeCommand('setContext', 'highlight.scope', 'openFiles');  
-        for (const editor of vscode.window.visibleTextEditors) {  
-            manager.refreshAll(editor);  
-        }  
-    });  
-  
-    // Comando: escopo → active only  
-    const scopeActiveOnlyCmd = vscode.commands.registerCommand('highlight.scopeActiveOnly', () => {  
-        highlightScope = 'activeOnly';  
-        vscode.commands.executeCommand('setContext', 'highlight.scope', 'activeOnly');  
-        const editor = vscode.window.activeTextEditor;  
-        if (editor) {  
-            for (const visibleEditor of vscode.window.visibleTextEditors) {  
-                if (visibleEditor !== editor) {  
-                    manager.clearDecorations(visibleEditor);  
-                }  
-            }  
-            manager.refreshAll(editor);  
-        }  
-    });  
-  
     context.subscriptions.push(  
         addCmd, removeCmd, editColorCmd, goToNextCmd,  
         suppressCmd, unsuppressCmd, luminolCmd, luminolOffCmd,  
-        scopeWorkspaceCmd, scopeOpenFilesCmd, scopeActiveOnlyCmd,  
         onChange, onEditorChange, manager  
     );  
 }  
