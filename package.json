@@ -53,6 +53,21 @@
         "command": "highlight.luminolOff",
         "title": "Desativar Luminol",
         "icon": "$(lightbulb-autofix)"
+      },
+      {
+        "command": "highlight.scopeOpenFiles",
+        "title": "Escopo atual: Workspace (clique para mudar)",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "highlight.scopeActiveOnly",
+        "title": "Escopo atual: Arquivos Abertos (clique para mudar)",
+        "icon": "$(file)"
+      },
+      {
+        "command": "highlight.scopeWorkspace",
+        "title": "Escopo atual: Apenas Arquivo Ativo (clique para mudar)",
+        "icon": "$(circle-slash)"
       }
     ],
     "keybindings": [
@@ -132,21 +147,6 @@
           "command": "highlight.goToNext",
           "when": "view == highlightList",
           "group": "inline"
-        },
-        {
-          "command": "highlight.scopeOpenFiles",
-          "title": "Escopo atual: Workspace (clique para mudar)",
-          "icon": "$(folder)"
-        },
-        {
-          "command": "highlight.scopeActiveOnly",
-          "title": "Escopo atual: Arquivos Abertos (clique para mudar)",
-          "icon": "$(file)"
-        },
-        {
-          "command": "highlight.scopeWorkspace",
-          "title": "Escopo atual: Apenas Arquivo Ativo (clique para mudar)",
-          "icon": "$(circle-slash)"
         }
       ]
     }
