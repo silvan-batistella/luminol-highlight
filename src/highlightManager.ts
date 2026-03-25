@@ -43,9 +43,7 @@ export class HighlightManager implements vscode.Disposable {
 
     unsuppressAll(editor: vscode.TextEditor): void {
         this._isSuppressed = false;
-        for (const entry of this.highlights) {
-            editor.setDecorations(entry.decorationType, entry.ranges);
-        }
+        this.refreshAll(editor); // recalcula ranges em vez de usar stale  
     }
 
     getHighlights(): HighlightEntry[] {
@@ -74,14 +72,12 @@ export class HighlightManager implements vscode.Disposable {
         }
     }
 
-    // Adicionar este método novo:  
     clearDecorations(editor: vscode.TextEditor): void {
         for (const entry of this.highlights) {
             editor.setDecorations(entry.decorationType, []);
         }
     }
 
-    // Alterar refreshAll para respeitar _isSuppressed:  
     refreshAll(editor: vscode.TextEditor): void {
         for (const entry of this.highlights) {
             entry.ranges = findRegexMatches(editor.document, entry.pattern);
