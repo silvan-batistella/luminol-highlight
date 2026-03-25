@@ -9,15 +9,147 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "luminol-highlight.helloWorld",
-        "title": "Hello World"
+        "command": "highlight.addPattern",
+        "title": "Adicionar Highlight"
+      },
+      {
+        "command": "highlight.removePattern",
+        "title": "Remover Highlight",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "highlight.editColor",
+        "title": "Editar Cor",
+        "icon": "$(symbol-color)"
+      },
+      {
+        "command": "highlight.goToNext",
+        "title": "Ir para Próximo Match",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "highlight.suppressAll",
+        "title": "Suprimir Highlights",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "highlight.unsuppressAll",
+        "title": "Mostrar Highlights",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "highlight.luminol",
+        "title": "Ativar Luminol",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "highlight.luminolOff",
+        "title": "Desativar Luminol",
+        "icon": "$(lightbulb-autofix)"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "highlight.addPattern",
+        "key": "ctrl+shift+h",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "highlight-explorer",
+          "title": "Highlights",
+          "icon": "resources/highlight-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "highlight-explorer": [
+        {
+          "id": "highlightList",
+          "name": "Highlight Patterns"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "highlight.suppressAll",
+          "when": "view == highlightList && !highlight.isSuppressed",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.unsuppressAll",
+          "when": "view == highlightList && highlight.isSuppressed",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.luminol",
+          "when": "view == highlightList && !highlight.isLuminol",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.luminolOff",
+          "when": "view == highlightList && highlight.isLuminol",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.scopeOpenFiles",
+          "when": "view == highlightList && highlight.scope == 'workspace'",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.scopeActiveOnly",
+          "when": "view == highlightList && highlight.scope == 'openFiles'",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.scopeWorkspace",
+          "when": "view == highlightList && highlight.scope == 'activeOnly'",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "highlight.removePattern",
+          "when": "view == highlightList",
+          "group": "inline"
+        },
+        {
+          "command": "highlight.editColor",
+          "when": "view == highlightList",
+          "group": "inline"
+        },
+        {
+          "command": "highlight.goToNext",
+          "when": "view == highlightList",
+          "group": "inline"
+        },
+        {
+          "command": "highlight.scopeOpenFiles",
+          "title": "Escopo atual: Workspace (clique para mudar)",
+          "icon": "$(folder)"
+        },
+        {
+          "command": "highlight.scopeActiveOnly",
+          "title": "Escopo atual: Arquivos Abertos (clique para mudar)",
+          "icon": "$(file)"
+        },
+        {
+          "command": "highlight.scopeWorkspace",
+          "title": "Escopo atual: Apenas Arquivo Ativo (clique para mudar)",
+          "icon": "$(circle-slash)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
