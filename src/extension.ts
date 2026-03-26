@@ -16,21 +16,22 @@ export function activate(context: vscode.ExtensionContext) {
     const treeProvider = new HighlightTreeProvider(manager);
     vscode.window.registerTreeDataProvider('highlightList', treeProvider);
 
+    // Estado inicial dos comentários  
+    vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', true);
+
     // Restaurar highlights salvos no workspace  
     const saved = HighlightManager.loadState(context);
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor && saved.length > 0) {
-        for (const { pattern, color } of saved) {
-            manager.addHighlight(activeEditor, pattern, color);
+        for (const { pattern, color, comment } of saved) {
+            manager.addHighlight(activeEditor, pattern, color, comment);
         }
     }
 
-    // Ao trocar de arquivo: sempre reaplicar highlights (comportamento workspace)  
+    // Ao trocar de arquivo: sempre reaplicar highlights  
     const onEditorChange = vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (!editor) { return; }
-
         manager.refreshAll(editor);
-
         if (isLuminolActive) {
             activateLuminol(manager, editor);
         }
@@ -44,7 +45,6 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // Pré-preencher com a seleção se for de uma única linha  
         const selection = editor.selection;
         const selectedText = !selection.isEmpty && selection.isSingleLine
             ? editor.document.getText(selection)
@@ -60,7 +60,12 @@ export function activate(context: vscode.ExtensionContext) {
         const color = await pickColor();
         if (!color) { return; }
 
-        manager.addHighlight(editor, pattern, color);
+        const comment = await vscode.window.showInputBox({
+            prompt: 'Justificativa do highlight (opcional — Enter para pular, use \\n para quebra de linha)',
+            placeHolder: 'Ex: Erro crítico\\nVerificar logs',
+        });
+
+        manager.addHighlight(editor, pattern, color, comment || undefined);
         manager.saveState(context);
 
         if (isLuminolActive) {
@@ -102,7 +107,6 @@ export function activate(context: vscode.ExtensionContext) {
     const editColorCmd = vscode.commands.registerCommand('highlight.editColor', async (item: HighlightItem) => {
         if (!item) { return; }
 
-        // Capturar editor ANTES de abrir o WebView  
         const editor = vscode.window.activeTextEditor;
 
         const newColor = await pickColor(item.entry.color);
@@ -114,6 +118,22 @@ export function activate(context: vscode.ExtensionContext) {
                 activateLuminol(manager, editor);
             }
         }
+        manager.saveState(context);
+    });
+
+    // Comando: editar comentário  
+    const editCommentCmd = vscode.commands.registerCommand('highlight.editComment', async (item: HighlightItem) => {
+        if (!item) { return; }
+
+        const current = item.entry.comment ?? '';
+        const newComment = await vscode.window.showInputBox({
+            prompt: 'Editar justificativa (use \\n para quebra de linha, vazio para remover)',
+            value: current,
+        });
+
+        if (newComment === undefined) { return; } // cancelou  
+
+        manager.editComment(item.index, newComment || undefined);
         manager.saveState(context);
     });
 
@@ -172,9 +192,22 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('setContext', 'highlight.isLuminol', false);
     });
 
+    // Comando: mostrar comentários  
+    const showCommentsCmd = vscode.commands.registerCommand('highlight.showComments', () => {
+        treeProvider.commentsVisible = true;
+        vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', true);
+    });
+
+    // Comando: ocultar comentários  
+    const hideCommentsCmd = vscode.commands.registerCommand('highlight.hideComments', () => {
+        treeProvider.commentsVisible = false;
+        vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', false);
+    });
+
     context.subscriptions.push(
-        addCmd, removeCmd, editColorCmd, goToNextCmd,
+        addCmd, removeCmd, editColorCmd, editCommentCmd, goToNextCmd,
         suppressCmd, unsuppressCmd, luminolCmd, luminolOffCmd,
+        showCommentsCmd, hideCommentsCmd,
         onChange, onEditorChange, manager
     );
 }

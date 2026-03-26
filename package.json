@@ -30,6 +30,11 @@
         "icon": "$(symbol-color)"
       },
       {
+        "command": "highlight.editComment",
+        "title": "Editar Comentário",
+        "icon": "$(comment)"
+      },
+      {
         "command": "highlight.goToNext",
         "title": "Ir para Próximo Match",
         "icon": "$(arrow-right)"
@@ -53,6 +58,16 @@
         "command": "highlight.luminolOff",
         "title": "Desativar Luminol",
         "icon": "$(lightbulb-autofix)"
+      },
+      {
+        "command": "highlight.showComments",
+        "title": "Mostrar Comentários",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "highlight.hideComments",
+        "title": "Ocultar Comentários",
+        "icon": "$(comment-discussion)"
       }
     ],
     "keybindings": [
@@ -82,6 +97,16 @@
     "menus": {
       "view/title": [
         {
+          "command": "highlight.hideComments",
+          "when": "view == highlightList && highlight.commentsVisible",
+          "group": "navigation"
+        },
+        {
+          "command": "highlight.showComments",
+          "when": "view == highlightList && !highlight.commentsVisible",
+          "group": "navigation"
+        },
+        {
           "command": "highlight.suppressAll",
           "when": "view == highlightList && !highlight.isSuppressed",
           "group": "navigation"
@@ -105,17 +130,22 @@
       "view/item/context": [
         {
           "command": "highlight.removePattern",
-          "when": "view == highlightList",
+          "when": "view == highlightList && viewItem == highlightEntry",
           "group": "inline"
         },
         {
           "command": "highlight.editColor",
-          "when": "view == highlightList",
+          "when": "view == highlightList && viewItem == highlightEntry",
+          "group": "inline"
+        },
+        {
+          "command": "highlight.editComment",
+          "when": "view == highlightList && viewItem == highlightEntry",
           "group": "inline"
         },
         {
           "command": "highlight.goToNext",
-          "when": "view == highlightList",
+          "when": "view == highlightList && viewItem == highlightEntry",
           "group": "inline"
         }
       ]

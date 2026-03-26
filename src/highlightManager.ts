@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { findRegexMatches } from './regexMatcher';
-import { isDark } from './colorUtils';
 
 export interface HighlightEntry {
     pattern: string;
     color: string;
+    comment?: string;
     ranges: vscode.Range[];
     decorationType: vscode.TextEditorDecorationType;
 }
@@ -19,14 +19,15 @@ export class HighlightManager implements vscode.Disposable {
         const data = this.highlights.map(entry => ({
             pattern: entry.pattern,
             color: entry.color,
+            comment: entry.comment,
         }));
         context.workspaceState.update('highlightPatterns', data);
     }
 
     static loadState(
         context: vscode.ExtensionContext
-    ): { pattern: string; color: string }[] {
-        return context.workspaceState.get<{ pattern: string; color: string }[]>(
+    ): { pattern: string; color: string; comment?: string }[] {
+        return context.workspaceState.get<{ pattern: string; color: string; comment?: string }[]>(
             'highlightPatterns', []
         );
     }
@@ -51,18 +52,16 @@ export class HighlightManager implements vscode.Disposable {
         return this.highlights;
     }
 
-    addHighlight(editor: vscode.TextEditor, pattern: string, color: string): void {
+    addHighlight(editor: vscode.TextEditor, pattern: string, color: string, comment?: string): void {
         const ranges = findRegexMatches(editor.document, pattern);
 
         const decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: color,
-            color: isDark(color) ? '#BABACA' : undefined,
-            fontWeight: 'bold',
         });
 
         editor.setDecorations(decorationType, ranges);
 
-        this.highlights.push({ pattern, color, ranges, decorationType });
+        this.highlights.push({ pattern, color, comment, ranges, decorationType });
         this._onDidChange.fire();
     }
 
@@ -73,6 +72,13 @@ export class HighlightManager implements vscode.Disposable {
             this.highlights.splice(index, 1);
             this._onDidChange.fire();
         }
+    }
+
+    editComment(index: number, comment: string | undefined): void {
+        const entry = this.highlights[index];
+        if (!entry) { return; }
+        entry.comment = comment;
+        this._onDidChange.fire();
     }
 
     clearDecorations(editor: vscode.TextEditor): void {
@@ -99,8 +105,6 @@ export class HighlightManager implements vscode.Disposable {
         entry.color = newColor;
         entry.decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: newColor,
-            color: isDark(newColor) ? '#BABACA' : undefined,
-            fontWeight: 'bold',  
         });
         editor.setDecorations(entry.decorationType, entry.ranges);
         this._onDidChange.fire();

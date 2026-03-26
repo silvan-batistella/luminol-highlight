@@ -26,12 +26,8 @@ export function hexToRgba(hex: string, alpha: number): string {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/**  
- * Retorna true se a cor for escura (texto ficaria ilegível sobre ela).  
- * Usa a fórmula de perceived brightness (ITU-R BT.601).  
- */
 export function isDark(hex: string): boolean {
     const { r, g, b } = hexToRgb(hex);
-    const brightness = (299 * r + 587 * g + 114 * b) / 1000;
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     return brightness < 128;
 }
