@@ -3,6 +3,11 @@
   "displayName": "Luminol Highlight",
   "description": "Destaque trechos de código via regex com cores customizáveis, modo Luminol forense e sidebar para gerenciamento visual.",
   "version": "0.0.1",
+  "publisher": "silvan-batistella",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/silvan-batistella/luminol-highlight"
+  },
   "engines": {
     "vscode": "^1.110.0"
   },
@@ -17,7 +22,8 @@
     "commands": [
       {
         "command": "highlight.addPattern",
-        "title": "Adicionar Highlight"
+        "title": "Adicionar Highlight",
+        "icon": "$(add)"
       },
       {
         "command": "highlight.removePattern",
@@ -38,6 +44,14 @@
         "command": "highlight.goToNext",
         "title": "Ir para Próximo Match",
         "icon": "$(arrow-right)"
+      },
+      {
+        "command": "highlight.goToNextGlobal",
+        "title": "Próximo Highlight (Global)"
+      },
+      {
+        "command": "highlight.goToPrevGlobal",
+        "title": "Highlight Anterior (Global)"
       },
       {
         "command": "highlight.suppressAll",
@@ -68,6 +82,16 @@
         "command": "highlight.hideComments",
         "title": "Ocultar Comentários",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "highlight.exportHighlights",
+        "title": "Exportar Highlights",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "highlight.importHighlights",
+        "title": "Importar Highlights",
+        "icon": "$(cloud-download)"
       }
     ],
     "keybindings": [
@@ -75,6 +99,16 @@
         "command": "highlight.addPattern",
         "key": "ctrl+shift+h",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "highlight.goToNextGlobal",
+        "key": "f10",
+        "when": "editorTextFocus && !editorHasSelection && !findWidgetVisible"
+      },
+      {
+        "command": "highlight.goToPrevGlobal",
+        "key": "f9",
+        "when": "editorTextFocus && !editorHasSelection && !findWidgetVisible"
       }
     ],
     "viewsContainers": {
@@ -97,34 +131,49 @@
     "menus": {
       "view/title": [
         {
+          "command": "highlight.addPattern",
+          "when": "view == highlightList",
+          "group": "navigation@1"
+        },
+        {
+          "command": "highlight.importHighlights",
+          "when": "view == highlightList",
+          "group": "navigation@2"
+        },
+        {
+          "command": "highlight.exportHighlights",
+          "when": "view == highlightList",
+          "group": "navigation@3"
+        },
+        {
           "command": "highlight.hideComments",
           "when": "view == highlightList && highlight.commentsVisible",
-          "group": "navigation"
+          "group": "navigation@4"
         },
         {
           "command": "highlight.showComments",
           "when": "view == highlightList && !highlight.commentsVisible",
-          "group": "navigation"
+          "group": "navigation@4"
         },
         {
           "command": "highlight.suppressAll",
           "when": "view == highlightList && !highlight.isSuppressed",
-          "group": "navigation"
+          "group": "navigation@5"
         },
         {
           "command": "highlight.unsuppressAll",
           "when": "view == highlightList && highlight.isSuppressed",
-          "group": "navigation"
+          "group": "navigation@5"
         },
         {
           "command": "highlight.luminol",
           "when": "view == highlightList && !highlight.isLuminol",
-          "group": "navigation"
+          "group": "navigation@6"
         },
         {
           "command": "highlight.luminolOff",
           "when": "view == highlightList && highlight.isLuminol",
-          "group": "navigation"
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [

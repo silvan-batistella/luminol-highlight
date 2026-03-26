@@ -107,6 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
     const editColorCmd = vscode.commands.registerCommand('highlight.editColor', async (item: HighlightItem) => {
         if (!item) { return; }
 
+        // Capturar editor ANTES de abrir o WebView  
         const editor = vscode.window.activeTextEditor;
 
         const newColor = await pickColor(item.entry.color);
@@ -137,7 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
         manager.saveState(context);
     });
 
-    // Comando: ir para próximo match  
+    // Comando: ir para próximo match (por padrão individual — botão da sidebar)  
     const goToNextCmd = vscode.commands.registerCommand('highlight.goToNext', (item: HighlightItem) => {
         if (!item) { return; }
 
@@ -152,6 +153,37 @@ export function activate(context: vscode.ExtensionContext) {
 
         editor.selection = new vscode.Selection(next.start, next.start);
         editor.revealRange(next, vscode.TextEditorRevealType.InCenter);
+    });
+
+    // Comando: próximo highlight global (F3) — navega por TODOS os padrões linearmente  
+    const goToNextGlobalCmd = vscode.commands.registerCommand('highlight.goToNextGlobal', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) { return; }
+
+        const allRanges = manager.getAllRanges();
+        if (allRanges.length === 0) { return; }
+
+        const cursor = editor.selection.active;
+        const next = allRanges.find(r => r.start.isAfter(cursor)) ?? allRanges[0];
+
+        editor.selection = new vscode.Selection(next.start, next.start);
+        editor.revealRange(next, vscode.TextEditorRevealType.InCenter);
+    });
+
+    // Comando: highlight anterior global (Shift+F3)  
+    const goToPrevGlobalCmd = vscode.commands.registerCommand('highlight.goToPrevGlobal', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) { return; }
+
+        const allRanges = manager.getAllRanges();
+        if (allRanges.length === 0) { return; }
+
+        const cursor = editor.selection.active;
+        const prev = [...allRanges].reverse().find(r => r.start.isBefore(cursor))
+            ?? allRanges[allRanges.length - 1];
+
+        editor.selection = new vscode.Selection(prev.start, prev.start);
+        editor.revealRange(prev, vscode.TextEditorRevealType.InCenter);
     });
 
     // Comando: suprimir highlights  
@@ -175,9 +207,6 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;
         if (!editor) { return; }
         manager.unsuppressAll(editor);
-        if (isLuminolActive) {
-            activateLuminol(manager, editor);
-        }
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', false);
     });
 
@@ -210,10 +239,91 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', false);
     });
 
+    // Comando: exportar highlights  
+    const exportCmd = vscode.commands.registerCommand('highlight.exportHighlights', async () => {
+        const data = manager.getExportData();
+        if (data.length === 0) {
+            vscode.window.showWarningMessage('Nenhum highlight para exportar.');
+            return;
+        }
+
+        const uri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file('highlights.json'),
+            filters: { 'JSON': ['json'] },
+            title: 'Exportar Highlights',
+        });
+        if (!uri) { return; }
+
+        const json = JSON.stringify(data, null, 2);
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(json, 'utf-8'));
+        vscode.window.showInformationMessage(`Highlights exportados para ${uri.fsPath}`);
+    });
+
+    // Comando: importar highlights  
+    const importCmd = vscode.commands.registerCommand('highlight.importHighlights', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showWarningMessage('Nenhum editor ativo.');
+            return;
+        }
+
+        const uris = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            filters: { 'JSON': ['json'] },
+            title: 'Importar Highlights',
+        });
+        if (!uris || uris.length === 0) { return; }
+
+        try {
+            const raw = await vscode.workspace.fs.readFile(uris[0]);
+            const data = JSON.parse(Buffer.from(raw).toString('utf-8'));
+
+            if (!Array.isArray(data)) {
+                vscode.window.showErrorMessage('Formato inválido: esperado um array JSON.');
+                return;
+            }
+
+            // Se já tem highlights, perguntar se quer substituir ou adicionar  
+            if (manager.getHighlights().length > 0) {
+                const choice = await vscode.window.showQuickPick(
+                    ['Substituir todos', 'Adicionar aos existentes'],
+                    { placeHolder: 'Já existem highlights. O que deseja fazer?' }
+                );
+                if (!choice) { return; }
+                if (choice === 'Substituir todos') {
+                    // Remover todos os existentes  
+                    while (manager.getHighlights().length > 0) {
+                        manager.removeHighlight(0);
+                    }
+                    manager.refreshAll(editor);
+                }
+            }
+
+            for (const entry of data) {
+                if (!entry.pattern) { continue; }
+                const color = entry.color || '#FFFF00';
+                const comment = entry.comment || undefined;
+                manager.addHighlight(editor, entry.pattern, color, comment);
+            }
+
+            manager.saveState(context);
+
+            if (isLuminolActive) {
+                activateLuminol(manager, editor);
+            }
+
+            vscode.window.showInformationMessage(`${data.length} highlight(s) importado(s).`);
+        } catch (err) {
+            vscode.window.showErrorMessage(`Erro ao importar: ${err}`);
+        }
+    });
+
     context.subscriptions.push(
         addCmd, removeCmd, editColorCmd, editCommentCmd, goToNextCmd,
+        goToNextGlobalCmd, goToPrevGlobalCmd,
         suppressCmd, unsuppressCmd, luminolCmd, luminolOffCmd,
         showCommentsCmd, hideCommentsCmd,
+        exportCmd, importCmd,
         onChange, onEditorChange, manager
     );
 }

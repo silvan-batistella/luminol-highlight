@@ -1,3 +1,4 @@
+import { isDark } from './colorUtils';
 import * as vscode from 'vscode';
 import { findRegexMatches } from './regexMatcher';
 
@@ -57,6 +58,8 @@ export class HighlightManager implements vscode.Disposable {
 
         const decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: color,
+            color: isDark(color) ? '#BABACA' : undefined,
+            fontWeight: 'bold',
         });
 
         editor.setDecorations(decorationType, ranges);
@@ -105,6 +108,8 @@ export class HighlightManager implements vscode.Disposable {
         entry.color = newColor;
         entry.decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: newColor,
+            color: isDark(newColor) ? '#BABACA' : undefined,
+            fontWeight: 'bold',
         });
         editor.setDecorations(entry.decorationType, entry.ranges);
         this._onDidChange.fire();
@@ -119,5 +124,35 @@ export class HighlightManager implements vscode.Disposable {
             entry.decorationType.dispose();
         }
         this.highlights = [];
+    }
+
+    getExportData(): { pattern: string; color: string; comment?: string }[] {
+        return this.highlights.map(entry => {
+            const obj: { pattern: string; color: string; comment?: string } = {
+                pattern: entry.pattern,
+                color: entry.color,
+            };
+            if (entry.comment) {
+                obj.comment = entry.comment;
+            }
+            return obj;
+        });
+    }
+
+    removeAll(): void {
+        for (const entry of this.highlights) {
+            entry.decorationType.dispose();
+        }
+        this.highlights = [];
+        this._onDidChange.fire();
+    }
+
+    getAllRanges(): vscode.Range[] {
+        const allRanges: vscode.Range[] = [];
+        for (const entry of this.highlights) {
+            allRanges.push(...entry.ranges);
+        }
+        allRanges.sort((a, b) => a.start.compareTo(b.start));
+        return allRanges;
     }
 }
