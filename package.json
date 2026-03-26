@@ -4,7 +4,7 @@
   "description": "Destaque trechos de código via regex com cores customizáveis, modo Luminol forense e sidebar para gerenciamento visual.",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "publisher": "silvan-batistella",
+  "publisher": "SilvanSBatistella",
   "repository": {
     "type": "git",
     "url": "https://github.com/silvan-batistella/luminol-highlight"
