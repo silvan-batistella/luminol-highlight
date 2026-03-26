@@ -110,19 +110,14 @@
     ],
     "keybindings": [
       {
-        "command": "highlight.addPattern",
+        "command": "workbench.view.extension.highlight-explorer",
         "key": "ctrl+shift+h",
-        "when": "editorTextFocus"
+        "when": "focusedView != 'highlightList'"
       },
       {
-        "command": "highlight.goToNextGlobal",
-        "key": "f10",
-        "when": "editorTextFocus && !editorHasSelection && !findWidgetVisible"
-      },
-      {
-        "command": "highlight.goToPrevGlobal",
-        "key": "f9",
-        "when": "editorTextFocus && !editorHasSelection && !findWidgetVisible"
+        "command": "workbench.action.closeSidebar",
+        "key": "ctrl+shift+h",
+        "when": "focusedView == 'highlightList'"
       }
     ],
     "viewsContainers": {
