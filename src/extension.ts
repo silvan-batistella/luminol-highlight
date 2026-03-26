@@ -158,10 +158,16 @@ export function activate(context: vscode.ExtensionContext) {
     const suppressCmd = vscode.commands.registerCommand('highlight.suppressAll', () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) { return; }
-        manager.suppressAll(editor);
+
+        // 1. Desativar Luminol PRIMEIRO (restaura decorações temporariamente — ok)  
         if (isLuminolActive) {
             deactivateLuminol(manager, editor);
+            isLuminolActive = false;
+            vscode.commands.executeCommand('setContext', 'highlight.isLuminol', false);
         }
+
+        // 2. Agora suprimir highlights (não será desfeito pelo deactivateLuminol)  
+        manager.suppressAll(editor);
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', true);
     });
 
