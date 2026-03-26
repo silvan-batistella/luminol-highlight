@@ -47,11 +47,13 @@
       },
       {
         "command": "highlight.goToNextGlobal",
-        "title": "Próximo Highlight (Global)"
+        "title": "Próximo Highlight (Global)",
+        "icon": "$(arrow-down)"
       },
       {
         "command": "highlight.goToPrevGlobal",
-        "title": "Highlight Anterior (Global)"
+        "title": "Highlight Anterior (Global)",
+        "icon": "$(arrow-up)"
       },
       {
         "command": "highlight.suppressAll",
@@ -75,7 +77,7 @@
       },
       {
         "command": "highlight.showComments",
-        "title": "Mostrar Comentários",
+        "title": "Exibir Comentários",
         "icon": "$(comment)"
       },
       {
@@ -92,6 +94,18 @@
         "command": "highlight.importHighlights",
         "title": "Importar Highlights",
         "icon": "$(cloud-download)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "highlight.cloudMenu",
+        "label": "Backup de Highlights",
+        "icon": "$(cloud)"
+      },
+      {
+        "id": "highlight.eyeMenu",
+        "label": "Visibilidade",
+        "icon": "$(eye)"
       }
     ],
     "keybindings": [
@@ -136,44 +150,66 @@
           "group": "navigation@1"
         },
         {
-          "command": "highlight.importHighlights",
+          "command": "highlight.goToPrevGlobal",
           "when": "view == highlightList",
           "group": "navigation@2"
         },
         {
-          "command": "highlight.exportHighlights",
+          "command": "highlight.goToNextGlobal",
           "when": "view == highlightList",
           "group": "navigation@3"
         },
         {
+          "submenu": "highlight.cloudMenu",
+          "when": "view == highlightList",
+          "group": "navigation@4"
+        },
+        {
+          "submenu": "highlight.eyeMenu",
+          "when": "view == highlightList",
+          "group": "navigation@5"
+        },
+        {
           "command": "highlight.hideComments",
           "when": "view == highlightList && highlight.commentsVisible",
-          "group": "navigation@4"
+          "group": "navigation@6"
         },
         {
           "command": "highlight.showComments",
           "when": "view == highlightList && !highlight.commentsVisible",
-          "group": "navigation@4"
+          "group": "navigation@6"
+        }
+      ],
+      "highlight.cloudMenu": [
+        {
+          "command": "highlight.exportHighlights",
+          "group": "1_backup"
         },
         {
+          "command": "highlight.importHighlights",
+          "group": "1_backup"
+        }
+      ],
+      "highlight.eyeMenu": [
+        {
           "command": "highlight.suppressAll",
-          "when": "view == highlightList && !highlight.isSuppressed",
-          "group": "navigation@5"
+          "when": "!highlight.isSuppressed",
+          "group": "1_highlights"
         },
         {
           "command": "highlight.unsuppressAll",
-          "when": "view == highlightList && highlight.isSuppressed",
-          "group": "navigation@5"
+          "when": "highlight.isSuppressed",
+          "group": "1_highlights"
         },
         {
           "command": "highlight.luminol",
-          "when": "view == highlightList && !highlight.isLuminol",
-          "group": "navigation@6"
+          "when": "!highlight.isLuminol",
+          "group": "2_luminol"
         },
         {
           "command": "highlight.luminolOff",
-          "when": "view == highlightList && highlight.isLuminol",
-          "group": "navigation@6"
+          "when": "highlight.isLuminol",
+          "group": "2_luminol"
         }
       ],
       "view/item/context": [
