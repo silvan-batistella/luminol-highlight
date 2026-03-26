@@ -53,8 +53,8 @@ export class HighlightManager implements vscode.Disposable {
         return this.highlights;
     }
 
-    addHighlight(editor: vscode.TextEditor, pattern: string, color: string, comment?: string): void {
-        const ranges = findRegexMatches(editor.document, pattern);
+    addHighlight(editor: vscode.TextEditor | undefined, pattern: string, color: string, comment?: string): void {
+        const ranges = editor ? findRegexMatches(editor.document, pattern) : [];
 
         const decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: color,
@@ -62,7 +62,9 @@ export class HighlightManager implements vscode.Disposable {
             fontWeight: 'bold',
         });
 
-        editor.setDecorations(decorationType, ranges);
+        if (editor) {
+            editor.setDecorations(decorationType, ranges);
+        }
 
         this.highlights.push({ pattern, color, comment, ranges, decorationType });
         this._onDidChange.fire();

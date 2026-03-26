@@ -9,30 +9,30 @@ let manager: HighlightManager;
 let debounceTimer: NodeJS.Timeout | undefined;
 let isLuminolActive = false;
 
-function getEditor(): vscode.TextEditor | undefined {  
-    return vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];  
+function getEditor(): vscode.TextEditor | undefined {
+    return vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];
 }
 
 export function activate(context: vscode.ExtensionContext) {
     manager = new HighlightManager();
 
-    // Sidebar  
+    // Sidebar    
     const treeProvider = new HighlightTreeProvider(manager);
     vscode.window.registerTreeDataProvider('highlightList', treeProvider);
 
-    // Estado inicial dos comentários  
+    // Estado inicial dos comentários    
     vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', true);
 
-    // Restaurar highlights salvos no workspace  
+    // Restaurar highlights salvos no workspace    
     const saved = HighlightManager.loadState(context);
     const activeEditor = getEditor();
-    if (activeEditor && saved.length > 0) {
+    if (saved.length > 0) {
         for (const { pattern, color, comment } of saved) {
             manager.addHighlight(activeEditor, pattern, color, comment);
         }
     }
 
-    // Ao trocar de arquivo: sempre reaplicar highlights  
+    // Ao trocar de arquivo: sempre reaplicar highlights    
     const onEditorChange = vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (!editor) { return; }
         manager.refreshAll(editor);
@@ -41,17 +41,13 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Comando: adicionar highlight  
+    // Comando: adicionar highlight    
     const addCmd = vscode.commands.registerCommand('highlight.addPattern', async () => {
         const editor = getEditor();
-        if (!editor) {
-            vscode.window.showWarningMessage('Nenhum editor ativo.');
-            return;
-        }
 
-        const selection = editor.selection;
-        const selectedText = !selection.isEmpty && selection.isSingleLine
-            ? editor.document.getText(selection)
+        const selection = editor?.selection;
+        const selectedText = selection && !selection.isEmpty && selection.isSingleLine
+            ? editor!.document.getText(selection)
             : '';
 
         const pattern = await vscode.window.showInputBox({
@@ -72,12 +68,12 @@ export function activate(context: vscode.ExtensionContext) {
         manager.addHighlight(editor, pattern, color, comment || undefined);
         manager.saveState(context);
 
-        if (isLuminolActive) {
+        if (editor && isLuminolActive) {
             activateLuminol(manager, editor);
         }
     });
 
-    // Comando: remover highlight  
+    // Comando: remover highlight    
     const removeCmd = vscode.commands.registerCommand('highlight.removePattern', (item: HighlightItem) => {
         if (item) {
             manager.removeHighlight(item.index);
@@ -92,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Reatividade  
+    // Reatividade    
     const onChange = vscode.workspace.onDidChangeTextDocument((e) => {
         const editor = getEditor();
         if (!editor || editor.document !== e.document) { return; }
@@ -107,11 +103,11 @@ export function activate(context: vscode.ExtensionContext) {
         }, 300);
     });
 
-    // Comando: editar cor  
+    // Comando: editar cor    
     const editColorCmd = vscode.commands.registerCommand('highlight.editColor', async (item: HighlightItem) => {
         if (!item) { return; }
 
-        // Capturar editor ANTES de abrir o WebView  
+        // Capturar editor ANTES de abrir o WebView    
         const editor = getEditor();
 
         const newColor = await pickColor(item.entry.color);
@@ -126,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
         manager.saveState(context);
     });
 
-    // Comando: editar comentário  
+    // Comando: editar comentário    
     const editCommentCmd = vscode.commands.registerCommand('highlight.editComment', async (item: HighlightItem) => {
         if (!item) { return; }
 
@@ -136,18 +132,21 @@ export function activate(context: vscode.ExtensionContext) {
             value: current,
         });
 
-        if (newComment === undefined) { return; } // cancelou  
+        if (newComment === undefined) { return; } // cancelou    
 
         manager.editComment(item.index, newComment || undefined);
         manager.saveState(context);
     });
 
-    // Comando: ir para próximo match (por padrão individual — botão da sidebar)  
+    // Comando: ir para próximo match (por padrão individual — botão da sidebar)    
     const goToNextCmd = vscode.commands.registerCommand('highlight.goToNext', (item: HighlightItem) => {
         if (!item) { return; }
 
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para navegar entre highlights.');
+            return;
+        }
 
         const ranges = manager.getRanges(item.index);
         if (ranges.length === 0) { return; }
@@ -159,10 +158,13 @@ export function activate(context: vscode.ExtensionContext) {
         editor.revealRange(next, vscode.TextEditorRevealType.InCenter);
     });
 
-    // Comando: próximo highlight global (F3) — navega por TODOS os padrões linearmente  
+    // Comando: próximo highlight global (F3) — navega por TODOS os padrões linearmente    
     const goToNextGlobalCmd = vscode.commands.registerCommand('highlight.goToNextGlobal', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para navegar entre highlights.');
+            return;
+        }
 
         const allRanges = manager.getAllRanges();
         if (allRanges.length === 0) { return; }
@@ -174,10 +176,13 @@ export function activate(context: vscode.ExtensionContext) {
         editor.revealRange(next, vscode.TextEditorRevealType.InCenter);
     });
 
-    // Comando: highlight anterior global (Shift+F3)  
+    // Comando: highlight anterior global (Shift+F3)    
     const goToPrevGlobalCmd = vscode.commands.registerCommand('highlight.goToPrevGlobal', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para navegar entre highlights.');
+            return;
+        }
 
         const allRanges = manager.getAllRanges();
         if (allRanges.length === 0) { return; }
@@ -190,34 +195,43 @@ export function activate(context: vscode.ExtensionContext) {
         editor.revealRange(prev, vscode.TextEditorRevealType.InCenter);
     });
 
-    // Comando: suprimir highlights  
+    // Comando: suprimir highlights    
     const suppressCmd = vscode.commands.registerCommand('highlight.suppressAll', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para suprimir highlights.');
+            return;
+        }
 
-        // 1. Desativar Luminol PRIMEIRO (restaura decorações temporariamente — ok)  
+        // 1. Desativar Luminol PRIMEIRO (restaura decorações temporariamente — ok)    
         if (isLuminolActive) {
             deactivateLuminol(manager, editor);
             isLuminolActive = false;
             vscode.commands.executeCommand('setContext', 'highlight.isLuminol', false);
         }
 
-        // 2. Agora suprimir highlights (não será desfeito pelo deactivateLuminol)  
+        // 2. Agora suprimir highlights (não será desfeito pelo deactivateLuminol)    
         manager.suppressAll(editor);
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', true);
     });
 
     const unsuppressCmd = vscode.commands.registerCommand('highlight.unsuppressAll', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para reativar highlights.');
+            return;
+        }
         manager.unsuppressAll(editor);
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', false);
     });
 
-    // Comando: luminol  
+    // Comando: luminol    
     const luminolCmd = vscode.commands.registerCommand('highlight.luminol', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para ativar o modo Luminol.');
+            return;
+        }
         isLuminolActive = true;
         activateLuminol(manager, editor);
         vscode.commands.executeCommand('setContext', 'highlight.isLuminol', true);
@@ -225,25 +239,28 @@ export function activate(context: vscode.ExtensionContext) {
 
     const luminolOffCmd = vscode.commands.registerCommand('highlight.luminolOff', () => {
         const editor = getEditor();
-        if (!editor) { return; }
+        if (!editor) {
+            vscode.window.showWarningMessage('Abra um arquivo para desativar o modo Luminol.');
+            return;
+        }
         isLuminolActive = false;
         deactivateLuminol(manager, editor);
         vscode.commands.executeCommand('setContext', 'highlight.isLuminol', false);
     });
 
-    // Comando: mostrar comentários  
+    // Comando: mostrar comentários    
     const showCommentsCmd = vscode.commands.registerCommand('highlight.showComments', () => {
         treeProvider.commentsVisible = true;
         vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', true);
     });
 
-    // Comando: ocultar comentários  
+    // Comando: ocultar comentários    
     const hideCommentsCmd = vscode.commands.registerCommand('highlight.hideComments', () => {
         treeProvider.commentsVisible = false;
         vscode.commands.executeCommand('setContext', 'highlight.commentsVisible', false);
     });
 
-    // Comando: exportar highlights  
+    // Comando: exportar highlights    
     const exportCmd = vscode.commands.registerCommand('highlight.exportHighlights', async () => {
         const data = manager.getExportData();
         if (data.length === 0) {
@@ -263,13 +280,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(`Highlights exportados para ${uri.fsPath}`);
     });
 
-    // Comando: importar highlights  
+    // Comando: importar highlights    
     const importCmd = vscode.commands.registerCommand('highlight.importHighlights', async () => {
         const editor = getEditor();
-        if (!editor) {
-            vscode.window.showWarningMessage('Nenhum editor ativo.');
-            return;
-        }
 
         const uris = await vscode.window.showOpenDialog({
             canSelectMany: false,
@@ -287,7 +300,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // Se já tem highlights, perguntar se quer substituir ou adicionar  
+            // Se já tem highlights, perguntar se quer substituir ou adicionar    
             if (manager.getHighlights().length > 0) {
                 const choice = await vscode.window.showQuickPick(
                     ['Substituir todos', 'Adicionar aos existentes'],
@@ -295,11 +308,13 @@ export function activate(context: vscode.ExtensionContext) {
                 );
                 if (!choice) { return; }
                 if (choice === 'Substituir todos') {
-                    // Remover todos os existentes  
+                    // Remover todos os existentes    
                     while (manager.getHighlights().length > 0) {
                         manager.removeHighlight(0);
                     }
-                    manager.refreshAll(editor);
+                    if (editor) {
+                        manager.refreshAll(editor);
+                    }
                 }
             }
 
@@ -312,7 +327,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             manager.saveState(context);
 
-            if (isLuminolActive) {
+            if (editor && isLuminolActive) {
                 activateLuminol(manager, editor);
             }
 
