@@ -1,6 +1,6 @@
 {
   "name": "luminol-highlight-btl",
-  "displayName": "Luminol Highlight",
+  "displayName": "Luminol File Highlight",
   "description": "Destaque trechos de código via regex com cores customizáveis, modo Luminol forense e sidebar para gerenciamento visual.",
   "version": "0.1.0",
   "license": "Apache-2.0",
