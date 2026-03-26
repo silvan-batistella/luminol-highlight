@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { findRegexMatches } from './regexMatcher';
+import { isDark } from './colorUtils';
 
 export interface HighlightEntry {
     pattern: string;
@@ -43,7 +44,7 @@ export class HighlightManager implements vscode.Disposable {
 
     unsuppressAll(editor: vscode.TextEditor): void {
         this._isSuppressed = false;
-        this.refreshAll(editor); // recalcula ranges em vez de usar stale  
+        this.refreshAll(editor);
     }
 
     getHighlights(): HighlightEntry[] {
@@ -55,6 +56,8 @@ export class HighlightManager implements vscode.Disposable {
 
         const decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: color,
+            color: isDark(color) ? '#BABACA' : undefined,
+            fontWeight: 'bold',
         });
 
         editor.setDecorations(decorationType, ranges);
@@ -96,6 +99,8 @@ export class HighlightManager implements vscode.Disposable {
         entry.color = newColor;
         entry.decorationType = vscode.window.createTextEditorDecorationType({
             backgroundColor: newColor,
+            color: isDark(newColor) ? '#BABACA' : undefined,
+            fontWeight: 'bold',  
         });
         editor.setDecorations(entry.decorationType, entry.ranges);
         this._onDidChange.fire();
