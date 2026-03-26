@@ -9,6 +9,10 @@ let manager: HighlightManager;
 let debounceTimer: NodeJS.Timeout | undefined;
 let isLuminolActive = false;
 
+function getEditor(): vscode.TextEditor | undefined {  
+    return vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];  
+}
+
 export function activate(context: vscode.ExtensionContext) {
     manager = new HighlightManager();
 
@@ -21,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Restaurar highlights salvos no workspace  
     const saved = HighlightManager.loadState(context);
-    const activeEditor = vscode.window.activeTextEditor;
+    const activeEditor = getEditor();
     if (activeEditor && saved.length > 0) {
         for (const { pattern, color, comment } of saved) {
             manager.addHighlight(activeEditor, pattern, color, comment);
@@ -39,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: adicionar highlight  
     const addCmd = vscode.commands.registerCommand('highlight.addPattern', async () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) {
             vscode.window.showWarningMessage('Nenhum editor ativo.');
             return;
@@ -77,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
     const removeCmd = vscode.commands.registerCommand('highlight.removePattern', (item: HighlightItem) => {
         if (item) {
             manager.removeHighlight(item.index);
-            const editor = vscode.window.activeTextEditor;
+            const editor = getEditor();
             if (editor) {
                 manager.refreshAll(editor);
                 if (isLuminolActive) {
@@ -90,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Reatividade  
     const onChange = vscode.workspace.onDidChangeTextDocument((e) => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor || editor.document !== e.document) { return; }
         if (manager.isSuppressed) { return; }
 
@@ -108,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!item) { return; }
 
         // Capturar editor ANTES de abrir o WebView  
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
 
         const newColor = await pickColor(item.entry.color);
         if (!newColor) { return; }
@@ -142,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
     const goToNextCmd = vscode.commands.registerCommand('highlight.goToNext', (item: HighlightItem) => {
         if (!item) { return; }
 
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
 
         const ranges = manager.getRanges(item.index);
@@ -157,7 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: próximo highlight global (F3) — navega por TODOS os padrões linearmente  
     const goToNextGlobalCmd = vscode.commands.registerCommand('highlight.goToNextGlobal', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
 
         const allRanges = manager.getAllRanges();
@@ -172,7 +176,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: highlight anterior global (Shift+F3)  
     const goToPrevGlobalCmd = vscode.commands.registerCommand('highlight.goToPrevGlobal', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
 
         const allRanges = manager.getAllRanges();
@@ -188,7 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: suprimir highlights  
     const suppressCmd = vscode.commands.registerCommand('highlight.suppressAll', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
 
         // 1. Desativar Luminol PRIMEIRO (restaura decorações temporariamente — ok)  
@@ -204,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const unsuppressCmd = vscode.commands.registerCommand('highlight.unsuppressAll', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
         manager.unsuppressAll(editor);
         vscode.commands.executeCommand('setContext', 'highlight.isSuppressed', false);
@@ -212,7 +216,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: luminol  
     const luminolCmd = vscode.commands.registerCommand('highlight.luminol', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
         isLuminolActive = true;
         activateLuminol(manager, editor);
@@ -220,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const luminolOffCmd = vscode.commands.registerCommand('highlight.luminolOff', () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) { return; }
         isLuminolActive = false;
         deactivateLuminol(manager, editor);
@@ -261,7 +265,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Comando: importar highlights  
     const importCmd = vscode.commands.registerCommand('highlight.importHighlights', async () => {
-        const editor = vscode.window.activeTextEditor;
+        const editor = getEditor();
         if (!editor) {
             vscode.window.showWarningMessage('Nenhum editor ativo.');
             return;

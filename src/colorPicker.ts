@@ -139,7 +139,7 @@ export async function pickColor(currentColor?: string): Promise<string | undefin
         const panel = vscode.window.createWebviewPanel(  
             'luminolColorPicker',  
             'Escolha uma cor',  
-            { viewColumn: vscode.ViewColumn.Active, preserveFocus: false },  
+            { viewColumn: vscode.ViewColumn.Active, preserveFocus: true },  
             { enableScripts: true, retainContextWhenHidden: false }  
         );  
   
